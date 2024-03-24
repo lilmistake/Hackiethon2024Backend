@@ -11,7 +11,7 @@ from Game.gameSettings import HP, LEFTBORDER, RIGHTBORDER, LEFTSTART, RIGHTSTART
 
 # TODO FOR PARTICIPANT: Set primary and secondary skill here
 PRIMARY_SKILL = TeleportSkill
-SECONDARY_SKILL = Hadoken
+SECONDARY_SKILL = Grenade
 
 #constants, for easier move return
 #movements
@@ -41,17 +41,31 @@ class Script:
     def __init__(self):
         self.primary = PRIMARY_SKILL
         self.secondary = SECONDARY_SKILL
-        
-    # DO NOT TOUCH
+        self.hp_tracker = 100
+        self.enemy_last_known_pos = 0
+
     def init_player_skills(self):
         return self.primary, self.secondary
-    
-    # MAIN FUNCTION that returns a single move to the game manager
-    def get_move(self, player, enemy, player_projectiles, enemy_projectiles):
-        distance = abs(get_pos(player)[0] - get_pos(enemy)[0])
 
-        if distance < 3:
-            return LIGHT
+    def get_move(self, player, enemy, player_projectiles, enemy_projectiles):
+        current_hp = get_hp(player)
+        distance = get_distance(player, enemy)
+        my_pos = get_pos(player)[0]
+        enemy_pos = get_pos(enemy)[0]
+        getting_close = (self.enemy_last_known_pos < my_pos) or (enemy_pos < my_pos)
+
+        action = LIGHT
         
-        return FORWARD
-        
+        if (current_hp < self.hp_tracker - 10 or getting_close) and not primary_on_cooldown(player):
+            self.hp_tracker = current_hp
+            action = PRIMARY
+        elif distance <= 4 and not secondary_on_cooldown(player):
+            action = SECONDARY
+        elif distance == 1 and not heavy_on_cooldown(player):
+            action = HEAVY
+        else:
+            action = LIGHT
+
+        self.enemy_last_known_pos = enemy_pos
+        self.my_last_pos = my_pos
+        return action
